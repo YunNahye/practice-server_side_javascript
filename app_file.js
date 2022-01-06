@@ -8,32 +8,55 @@ app.use(bodyParser.urlencoded({ extended: false}));
 app.set('view engine', 'jade');
 app.set('views', './views_file');
 
-app.post('/topic', (req, res) => {
-  res.send(`
-    <h1>Server Side JavaScript</h1>
-    <ul>
-      <li><a href='/topic/express'>Express</a></li>
-      <li><a href='/topic/javascript'>Javascript</a></li>
-      <li><a href='/topic/nodejs'>Nodejs</a></li>
-    </ul>
-    <a href='/topic/new'>new</a>
-  `)
+app.get(['/topic', '/topic/:topic'], (req, res) => {
+  const topic = req.params.topic;
+    fs.readdir('data', (err, files) => {
+      if(err){
+        console.log(err);
+        res.status(500).send('Internal Server Error;');
+      }
+      else{
+        if(topic){
+          if(topic == 'new'){
+            res.render('new', { topics: files });
+          }
+          else{
+            fs.readFile('data/' + topic, 'utf-8', (err, data) => {
+              if(err){
+                res.status(500).send('Internal Server Error');
+              }
+              else{
+                res.render('view', { topics: files, title: topic, description: data });
+              }
+            });
+          }
+        }
+        else{
+          res.render('view', { topics: files });
+        }
+      }
+    });
 });
 
-// app.get('/topic/:name', (req, res) => {
-//   res.send(`
-//     <h1>Server Side Javascript</h1>
-//     <ul>
-//       <li><a href='/topic/express'>Express</a></li>
-//       <li><a href='/topic/javascript'>Javascript</a></li>
-//       <li><a href='/topic/nodejs'>Nodejs</a></li>
-//     </ul>
-//     <a href='/topic/new'>new</a>
-//   `)
-// });
-
-app.get('/topic/new', (req, res) => {
-  res.render('new');
+app.post('/topic', (req, res) => {
+  const title = req.body.title;
+  const description = req.body.description;
+  fs.writeFile('data/'+title, description, (err) => {
+    if(err){
+      res.status(500).send('Internal Server Error');
+    }
+    else{
+      fs.readdir('data', (err, files) => {
+        if(err){
+          console.log(err);
+          res.status(500).send('Internal Server Error;');
+        }
+        else{
+          res.redirect('/topic/'+title);
+        }
+      });
+    }
+  })
 });
 
 app.listen(3000, () => console.log('Connected 3000 port!'));
