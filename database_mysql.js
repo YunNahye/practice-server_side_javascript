@@ -7,7 +7,7 @@ const connection = mysql.createConnection({
 });
 connection.connect();
 
-const sql = 'DELETE FROM topic WHERE id=?';
+const sql = 'SELECT title FROM topic';
 // connection.query(sql, (err, rows, fields) => {
 //   if (err) console.log(err);
 //   else {
@@ -17,10 +17,11 @@ const sql = 'DELETE FROM topic WHERE id=?';
 //   }
 // });
 const params = [4];
-connection.query(sql, params, (err, rows, fields) => {
+connection.query(sql, (err, rows, fields) => {
   if (err) console.log(err);
   else {
     console.log(rows);
+    console.log(rows[title]);
   }
 })
 connection.end();
