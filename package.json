@@ -12,6 +12,7 @@
     "body-parser": "^1.19.1",
     "cookie-parser": "^1.4.6",
     "express": "^4.17.2",
+    "express-mysql-session": "^2.1.7",
     "express-session": "^1.17.2",
     "jade": "^1.11.0",
     "node-mysql": "^0.4.2",
