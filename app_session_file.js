@@ -1,11 +1,12 @@
 const express = require('express');
 const app = express();
 const session = require('express-session');
-const fileStore = require('session-file-store')(session);
+const FileStore = require('session-file-store')(session);
 app.use(session({
     secret: '460845613fag',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
+    store: new FileStore()
 }));
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded( { extended: false } ));
@@ -51,7 +52,9 @@ app.post('/auth/login', (req, res) => {
         else {
             if(password == member[0].password) {
                 req.session.username = username;
-                res.redirect('/welcome');
+                return req.session.save(function(){
+                    res.redirect('/welcome');
+                });
             }
             else {
                 res.send('<script type="text/javascript">alert("Check password");location.href="/auth/login";</script>');
@@ -62,7 +65,9 @@ app.post('/auth/login', (req, res) => {
 
 app.get('/auth/logout', (req, res) => {
     delete req.session.username;
-    res.redirect('/welcome');
+    return req.session.save(function(){
+        res.redirect('/welcome');
+    });
 });
 
 app.get('/welcome', (req, res) => {
