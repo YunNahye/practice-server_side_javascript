@@ -16,6 +16,8 @@ app.use(session({
 }));
 const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded( { extended: false } ));
+var bkfd2Password = require('pbkdf2-password');
+var hasher = bkfd2Password();
 const mysql = require('mysql');
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -25,7 +27,11 @@ const connection = mysql.createConnection({
 });
 connection.connect();
 
-const sql = ["select * from memeber where userid=?"];
+const sql = ["select * from memeber where userid=?", "insert into member(userid, password, email, salt) values(?, ?, ?, ?)"];
+
+app.get('/', (req, res) => {
+    res.redirect('/welcome');
+})
 
 app.get('/auth/login', (req, res) => {
     res.send(`
@@ -35,6 +41,7 @@ app.get('/auth/login', (req, res) => {
             <p><input type="password" name="password" placeholde="password"></p>
             <p><input type="submit">
         </form>
+        <p><a href="/auth/registration">registration</a></p>
     `);
 });
 
@@ -60,6 +67,38 @@ app.post('/auth/login', (req, res) => {
         }
     });
 });
+
+app.get('/auth/registration', (req, res) => {
+    res.send(`
+        <h1>Registration<h1>
+        <form action="/auth/registration" method="post">
+            <p><input type="text" name="username" placeholder="username"></p>
+            <P><input type="text" name="email" placeholder="email"></p>
+            <p><input type="password" name="password" placeholde="password"></p>
+            <p><input type="submit">
+        </form>
+    `);
+});
+
+app.post('/auth/registration', (req, res) => {
+    const username = req.body.username;
+    const email = req.body.email;
+    const password = req.body.password;
+    hasher({ password: password }, (err, pw, salt, hash) => {
+        if(err) {
+            console.log(err);
+            return;
+        }
+        connection.query(sql[1], [username, hash, email, salt], (error) => {
+            if(error) {
+                console.log(error);
+                return;
+            }
+            console.log('ok');
+            res.redirect('/auth/login');
+        })
+    });
+})
 
 app.get('/auth/logout', (req, res) => {
     delete req.session.username;
