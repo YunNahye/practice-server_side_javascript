@@ -27,7 +27,7 @@ const connection = mysql.createConnection({
 });
 connection.connect();
 
-const sql = ["select * from memeber where userid=?", "insert into member(userid, password, email, salt) values(?, ?, ?, ?)"];
+const sql = ["select * from member where userid=?", "insert into member(userid, password, email, salt) values(?, ?, ?, ?)"];
 
 app.get('/', (req, res) => {
     res.redirect('/welcome');
@@ -57,13 +57,17 @@ app.post('/auth/login', (req, res) => {
             res.redirect('/welcome');
         }
         else {
-            if(password == member[0].password) {
-                req.session.username = username;
-                res.redirect('/welcome');
-            }
-            else {
-                res.send('<script type="text/javascript">alert("Check password");location.href="/auth/login";</script>');
-            }
+            hasher({ password: password, salt: member[0].salt }, (error, pw, salt, hash) => {
+                if(hash === member[0].password) {
+                    req.session.username = username;
+                    req.session.save(() => {
+                        res.redirect('/welcome');
+                    })
+                }
+                else {
+                    res.send('<script type="text/javascript">alert("Check password");location.href="/auth/login";</script>');
+                }
+            });
         }
     });
 });
