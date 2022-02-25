@@ -26,6 +26,10 @@ const connection = mysql.createConnection({
     database: 'o2'
 });
 connection.connect();
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+app.use(passport.initialize());
+app.use(passport.session());
 
 const sql = ["select * from member where userid=?", "insert into member(userid, password, email, salt) values(?, ?, ?, ?)"];
 
