@@ -30,6 +30,14 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 app.use(passport.initialize());
 app.use(passport.session());
+passport.serializeUser(function(user, done) {
+    done(null, user.userid);
+});
+passport.deserializeUser(function(id, done) {
+    connection.query(sql[0], id, (err, member) => {
+        done(null, member[0]);
+    });
+});
 passport.use(new LocalStrategy(
     function(username, password, done) {
         connection.query(sql[0], username, (err, member) => {
@@ -39,20 +47,14 @@ passport.use(new LocalStrategy(
             }
             else if(member.length == 0) {
                 done(null, false);
-                // res.redirect('/welcome');
             }
             else {
                 hasher({ password: password, salt: member[0].salt }, (error, pw, salt, hash) => {
                     if(hash === member[0].password) {
                         done(null, member[0]);
-                        // req.session.username = username;
-                        // req.session.save(() => {
-                        //     res.redirect('/welcome');
-                        // })
                     }
                     else {
                         done(null, false);
-                        //res.send('<script type="text/javascript">alert("Check password");location.href="/auth/login";</script>');
                     }
                 });
             }
