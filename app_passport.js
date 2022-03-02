@@ -30,6 +30,37 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 app.use(passport.initialize());
 app.use(passport.session());
+passport.serializeUser(function(user, done) {
+    done(null, user.userid);
+});
+passport.deserializeUser(function(id, done) {
+    connection.query(sql[0], id, (err, member) => {
+        done(null, member[0]);
+    });
+});
+passport.use(new LocalStrategy(
+    function(username, password, done) {
+        connection.query(sql[0], username, (err, member) => {
+            if(err) {
+                console.log(err);
+                res.send('Internal Server Error');
+            }
+            else if(member.length == 0) {
+                done(null, false);
+            }
+            else {
+                hasher({ password: password, salt: member[0].salt }, (error, pw, salt, hash) => {
+                    if(hash === member[0].password) {
+                        done(null, member[0]);
+                    }
+                    else {
+                        done(null, false);
+                    }
+                });
+            }
+        });
+    }
+));
 
 const sql = ["select * from member where userid=?", "insert into member(userid, password, email, salt) values(?, ?, ?, ?)"];
 
@@ -49,32 +80,34 @@ app.get('/auth/login', (req, res) => {
     `);
 });
 
-app.post('/auth/login', (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
-    connection.query(sql[0], username, (err, member) => {
-        if(err) {
-            console.log(err);
-            res.send('Internal Server Error');
-        }
-        else if(member.length == 0) {
-            res.redirect('/welcome');
-        }
-        else {
-            hasher({ password: password, salt: member[0].salt }, (error, pw, salt, hash) => {
-                if(hash === member[0].password) {
-                    req.session.username = username;
-                    req.session.save(() => {
-                        res.redirect('/welcome');
-                    })
-                }
-                else {
-                    res.send('<script type="text/javascript">alert("Check password");location.href="/auth/login";</script>');
-                }
-            });
-        }
-    });
-});
+// app.post('/auth/login', (req, res) => {
+//     const username = req.body.username;
+//     const password = req.body.password;
+//     connection.query(sql[0], username, (err, member) => {
+//         if(err) {
+//             console.log(err);
+//             res.send('Internal Server Error');
+//         }
+//         else if(member.length == 0) {
+//             res.redirect('/welcome');
+//         }
+//         else {
+//             hasher({ password: password, salt: member[0].salt }, (error, pw, salt, hash) => {
+//                 if(hash === member[0].password) {
+//                     req.session.username = username;
+//                     req.session.save(() => {
+//                         res.redirect('/welcome');
+//                     })
+//                 }
+//                 else {
+//                     res.send('<script type="text/javascript">alert("Check password");location.href="/auth/login";</script>');
+//                 }
+//             });
+//         }
+//     });
+// });
+
+app.post('/auth/login', passport.authenticate('local', { successRedirect: '/welcome', failureRedirect: '/welcome', failureFlash: false }));
 
 app.get('/auth/registration', (req, res) => {
     res.send(`
@@ -102,21 +135,28 @@ app.post('/auth/registration', (req, res) => {
                 console.log(error);
                 return;
             }
-            console.log('ok');
-            res.redirect('/auth/login');
+            connection.query(sql[0], username, (err, member) => {
+                req.login(member[0], function(err) {
+                    req.session.save(function() {
+                        res.redirect('/welcome');
+                    })
+                });
+            });
         })
     });
 })
 
 app.get('/auth/logout', (req, res) => {
-    delete req.session.username;
-    res.redirect('/welcome');
+    req.logout();
+    req.session.save(function() {
+        res.redirect('/welcome');
+    });
 });
 
 app.get('/welcome', (req, res) => {
-    if(req.session.username) {
+    if(req.user) {
         res.send(`
-            <h1>Hello, ${req.session.username}!</h1>
+            <h1>Hello, ${req.user.userid}!</h1>
             <p><a href="/auth/logout">logout</a></p>
         `);
     }
