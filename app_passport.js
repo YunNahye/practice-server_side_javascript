@@ -30,6 +30,35 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 app.use(passport.initialize());
 app.use(passport.session());
+passport.use(new LocalStrategy(
+    function(username, password, done) {
+        connection.query(sql[0], username, (err, member) => {
+            if(err) {
+                console.log(err);
+                res.send('Internal Server Error');
+            }
+            else if(member.length == 0) {
+                done(null, false);
+                // res.redirect('/welcome');
+            }
+            else {
+                hasher({ password: password, salt: member[0].salt }, (error, pw, salt, hash) => {
+                    if(hash === member[0].password) {
+                        done(null, member[0]);
+                        // req.session.username = username;
+                        // req.session.save(() => {
+                        //     res.redirect('/welcome');
+                        // })
+                    }
+                    else {
+                        done(null, false);
+                        //res.send('<script type="text/javascript">alert("Check password");location.href="/auth/login";</script>');
+                    }
+                });
+            }
+        });
+    }
+));
 
 const sql = ["select * from member where userid=?", "insert into member(userid, password, email, salt) values(?, ?, ?, ?)"];
 
@@ -49,32 +78,34 @@ app.get('/auth/login', (req, res) => {
     `);
 });
 
-app.post('/auth/login', (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
-    connection.query(sql[0], username, (err, member) => {
-        if(err) {
-            console.log(err);
-            res.send('Internal Server Error');
-        }
-        else if(member.length == 0) {
-            res.redirect('/welcome');
-        }
-        else {
-            hasher({ password: password, salt: member[0].salt }, (error, pw, salt, hash) => {
-                if(hash === member[0].password) {
-                    req.session.username = username;
-                    req.session.save(() => {
-                        res.redirect('/welcome');
-                    })
-                }
-                else {
-                    res.send('<script type="text/javascript">alert("Check password");location.href="/auth/login";</script>');
-                }
-            });
-        }
-    });
-});
+// app.post('/auth/login', (req, res) => {
+//     const username = req.body.username;
+//     const password = req.body.password;
+//     connection.query(sql[0], username, (err, member) => {
+//         if(err) {
+//             console.log(err);
+//             res.send('Internal Server Error');
+//         }
+//         else if(member.length == 0) {
+//             res.redirect('/welcome');
+//         }
+//         else {
+//             hasher({ password: password, salt: member[0].salt }, (error, pw, salt, hash) => {
+//                 if(hash === member[0].password) {
+//                     req.session.username = username;
+//                     req.session.save(() => {
+//                         res.redirect('/welcome');
+//                     })
+//                 }
+//                 else {
+//                     res.send('<script type="text/javascript">alert("Check password");location.href="/auth/login";</script>');
+//                 }
+//             });
+//         }
+//     });
+// });
+
+app.post('/auth/login', passport.authenticate('local', { successRedirect: '/welcome', failureRedirect: '/welcome', failureFlash: false }));
 
 app.get('/auth/registration', (req, res) => {
     res.send(`
