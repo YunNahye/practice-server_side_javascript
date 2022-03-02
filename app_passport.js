@@ -135,21 +135,28 @@ app.post('/auth/registration', (req, res) => {
                 console.log(error);
                 return;
             }
-            console.log('ok');
-            res.redirect('/auth/login');
+            connection.query(sql[0], username, (err, member) => {
+                req.login(member[0], function(err) {
+                    req.session.save(function() {
+                        res.redirect('/welcome');
+                    })
+                });
+            });
         })
     });
 })
 
 app.get('/auth/logout', (req, res) => {
-    delete req.session.username;
-    res.redirect('/welcome');
+    req.logout();
+    req.session.save(function() {
+        res.redirect('/welcome');
+    });
 });
 
 app.get('/welcome', (req, res) => {
-    if(req.session.username) {
+    if(req.user) {
         res.send(`
-            <h1>Hello, ${req.session.username}!</h1>
+            <h1>Hello, ${req.user.userid}!</h1>
             <p><a href="/auth/logout">logout</a></p>
         `);
     }
